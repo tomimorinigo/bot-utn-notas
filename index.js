@@ -18,11 +18,17 @@ const MI_WHATSAPP = process.env.MI_WHATSAPP;
 // ==================== FUNCIONES ====================
 
 async function enviarWhatsApp(mensaje) {
-  const horaActual = new Date().getHours();
+  // Obtener hora en Argentina (UTC-3) en formato 24 horas
+  const horaArgentina = new Date().toLocaleString('es-AR', { 
+    timeZone: 'America/Argentina/Buenos_Aires',
+    hour: 'numeric',
+    hour12: false
+  });
+  const horaActual = parseInt(horaArgentina);
   
-  // Verificar horario de silencio (1am - 7am)
-  if (horaActual >= 1 && horaActual < 7) {
-    console.log(`🌙 Horario de silencio (1am-7am). Mensaje NO enviado: ${horaActual}:00`);
+  // Verificar horario de silencio (00:00 - 7am)
+  if (horaActual >= 0 && horaActual < 7) {
+    console.log(`🌙 Horario de silencio (00:00-7am). Mensaje NO enviado: ${horaActual}:00`);
     console.log(`📝 Mensaje pendiente: ${mensaje.substring(0, 50)}...`);
     return false;
   }
