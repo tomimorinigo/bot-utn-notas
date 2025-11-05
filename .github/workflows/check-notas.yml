@@ -1,0 +1,39 @@
+name: Verificar Notas
+
+on:
+  schedule:
+    # corre cada 30 minutos
+    - cron: '*/30 * * * *'
+  
+  # tambien se puede ejecutar manual desde github
+  workflow_dispatch:
+
+jobs:
+  check-notas:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout código
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        
+    - name: Instalar dependencias
+      run: |
+        npm install playwright
+        npx playwright install chromium
+        npx playwright install-deps chromium
+    
+    - name: Ejecutar bot
+      env:
+        USUARIO: ${{ secrets.USUARIO }}
+        PASSWORD: ${{ secrets.PASSWORD }}
+        URL_BASE: ${{ secrets.URL_BASE }}
+        TWILIO_ACCOUNT_SID: ${{ secrets.TWILIO_ACCOUNT_SID }}
+        TWILIO_AUTH_TOKEN: ${{ secrets.TWILIO_AUTH_TOKEN }}
+        TWILIO_WHATSAPP_FROM: ${{ secrets.TWILIO_WHATSAPP_FROM }}
+        MI_WHATSAPP: ${{ secrets.MI_WHATSAPP }}
+      run: node bot-notas.js

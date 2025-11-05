@@ -1,0 +1,14 @@
+{
+  "name": "bot-utn-notas",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Bot para verificar notas en autogestión UTN",
+  "main": "bot-notas.js",
+  "scripts": {
+    "start": "node bot-notas.js"
+  },
+  "dependencies": {
+    "dotenv": "^17.2.3",
+    "playwright": "^1.56.1"
+  }
+}
