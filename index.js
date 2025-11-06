@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import { chromium } from 'playwright';
+import fs from 'fs/promises';
 
 // ==================== CONFIGURACIÓN ====================
 const USUARIO = process.env.USUARIO;
@@ -9,13 +10,36 @@ const URL_BASE = process.env.URL_BASE || 'https://a4.frc.utn.edu.ar/4';
 const MATERIA = process.env.MATERIA || 'Investigación Operativa';
 const COLUMNA_NOTA = parseInt(process.env.COLUMNA_NOTA || '1');
 
+// Nueva configuración: notificar siempre o solo cuando cambie
+const NOTIFICAR_SIEMPRE = process.env.NOTIFICAR_SIEMPRE === 'true';
+
 // Configuración de Twilio
 const TWILIO_ACCOUNT_SID = process.env.TWILIO_ACCOUNT_SID;
 const TWILIO_AUTH_TOKEN = process.env.TWILIO_AUTH_TOKEN;
 const TWILIO_WHATSAPP_FROM = process.env.TWILIO_WHATSAPP_FROM;
 const MI_WHATSAPP = process.env.MI_WHATSAPP;
 
+const ARCHIVO_ESTADO = 'ultima_nota.json';
+
 // ==================== FUNCIONES ====================
+
+async function cargarUltimoEstado() {
+  try {
+    const data = await fs.readFile(ARCHIVO_ESTADO, 'utf-8');
+    return JSON.parse(data);
+  } catch (error) {
+    // Si no existe el archivo, retornar estado vacío
+    return { nota: null, fecha: null };
+  }
+}
+
+async function guardarEstado(estado) {
+  try {
+    await fs.writeFile(ARCHIVO_ESTADO, JSON.stringify(estado, null, 2));
+  } catch (error) {
+    console.error('❌ Error al guardar estado:', error.message);
+  }
+}
 
 async function enviarWhatsApp(mensaje) {
   // Obtener hora en Argentina (UTC-3) en formato 24 horas
@@ -65,7 +89,7 @@ async function enviarWhatsApp(mensaje) {
 
 async function verificarNotas() {
   const browser = await chromium.launch({
-    headless: true,
+    headless: false,
     args: ['--no-sandbox', '--disable-dev-shm-usage']
   });
 
@@ -164,9 +188,65 @@ async function verificarNotas() {
 
     console.log(`📊 Nota encontrada: ${notaActual}`);
 
-    // Enviar notificación con la nota actual
-    const mensaje = `📋 Verificación de nota\n\n📚 Materia: ${MATERIA}\n📝 Columna: ${nombreColumna}\n📊 Nota actual: ${notaActual}\n\n🕐 ${new Date().toLocaleString('es-AR')}`;
-    await enviarWhatsApp(mensaje);
+    // Cargar estado anterior si no notificamos siempre
+    let debeNotificar = false;
+    let tipoNotificacion = '';
+    
+    if (NOTIFICAR_SIEMPRE) {
+      // Modo: notificar siempre cada 30 minutos
+      debeNotificar = true;
+      tipoNotificacion = 'verificación periódica';
+      console.log('ℹ️  Modo: Notificar siempre');
+    } else {
+      // Modo: notificar solo cuando cambie o sea diferente de cero
+      console.log('ℹ️  Modo: Notificar solo en cambios');
+      const estadoAnterior = await cargarUltimoEstado();
+      const notaAnterior = estadoAnterior.nota;
+      
+      if (notaAnterior === null) {
+        // Primera ejecución
+        console.log('🆕 Primera ejecución, guardando estado inicial');
+        if (notaActual !== '0') {
+          debeNotificar = true;
+          tipoNotificacion = 'primera ejecución - nota disponible';
+        } else {
+          console.log('ℹ️  Nota es 0, no se enviará notificación');
+        }
+      } else if (notaActual !== notaAnterior) {
+        // La nota cambió
+        debeNotificar = true;
+        tipoNotificacion = 'cambio de nota';
+        console.log(`🔄 Nota cambió: ${notaAnterior} → ${notaActual}`);
+      } else if (notaActual !== '0' && notaAnterior === '0') {
+        // Nota pasó de 0 a un valor
+        debeNotificar = true;
+        tipoNotificacion = 'nueva nota disponible';
+        console.log(`✨ Nueva nota disponible: ${notaActual}`);
+      } else {
+        console.log(`✅ Sin cambios (nota sigue siendo: ${notaActual})`);
+      }
+      
+      // Guardar estado actual
+      await guardarEstado({
+        nota: notaActual,
+        fecha: new Date().toISOString()
+      });
+    }
+
+    // Enviar notificación si corresponde
+    if (debeNotificar) {
+      let mensaje;
+      if (tipoNotificacion === 'cambio de nota') {
+        mensaje = `🎓 ¡NOTA ACTUALIZADA!\n\n📚 Materia: ${MATERIA}\n📝 Columna: ${nombreColumna}\n📊 Nota nueva: ${notaActual}\n\n🕐 ${new Date().toLocaleString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires' })}`;
+      } else if (tipoNotificacion === 'nueva nota disponible') {
+        mensaje = `✨ ¡NUEVA NOTA DISPONIBLE!\n\n📚 Materia: ${MATERIA}\n📝 Columna: ${nombreColumna}\n📊 Nota: ${notaActual}\n\n🕐 ${new Date().toLocaleString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires' })}`;
+      } else {
+        mensaje = `📋 Verificación de nota\n\n📚 Materia: ${MATERIA}\n📝 Columna: ${nombreColumna}\n📊 Nota actual: ${notaActual}\n\n🕐 ${new Date().toLocaleString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires' })}`;
+      }
+      await enviarWhatsApp(mensaje);
+    } else {
+      console.log('📵 No se envió notificación (sin cambios)');
+    }
 
     return notaActual;
 

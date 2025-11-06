@@ -47,6 +47,7 @@ Ve a tu repositorio forkeado y configura los secrets:
 | `PASSWORD` | Tu contraseña de autogestión UTN | `miContraseña123` |
 | `MATERIA` | Nombre exacto de la materia a verificar | `Investigación Operativa` |
 | `COLUMNA_NOTA` | Número de columna de la nota (1, 2, 3...) | `2` |
+| `NOTIFICAR_SIEMPRE` | `true` = notificar cada 30 min, `false` = solo cuando cambie | `false` |
 | `TWILIO_ACCOUNT_SID` | Account SID de Twilio | `ACxxxxxxxxxxxxx` |
 | `TWILIO_AUTH_TOKEN` | Auth Token de Twilio | `xxxxxxxxxxxxx` |
 | `TWILIO_WHATSAPP_FROM` | Número de WhatsApp de Twilio | `whatsapp:+14155238886` |
@@ -92,14 +93,55 @@ El número corresponde a la posición de la columna en la tabla de notas:
 | `4` | 1º Recuperatorio |
 | `5` | 2º Recuperatorio |
 
-## 📝 Ejemplo de Notificación por WhatsApp
+### Modo de Notificación
 
+El bot tiene dos modos de operación controlados por `NOTIFICAR_SIEMPRE`:
+
+#### 🔔 `NOTIFICAR_SIEMPRE=true` (Modo Verbose)
+- ✅ Envía un mensaje cada vez que se ejecuta (cada 30 minutos)
+- ✅ Te mantiene informado constantemente del estado de tu nota
+- ⚠️ Puede generar muchos mensajes si la nota no cambia
+
+#### 🔕 `NOTIFICAR_SIEMPRE=false` (Modo Inteligente) - **RECOMENDADO**
+- ✅ Solo envía mensaje cuando la nota **cambia**
+- ✅ Solo envía mensaje cuando la nota pasa de **0 a un valor**
+- ✅ No envía mensaje si la nota sigue siendo 0
+- ✅ Ahorra mensajes y solo te notifica cuando hay novedades importantes
+- 💾 Guarda el estado de la última nota verificada
+
+## 📝 Ejemplos de Notificaciones por WhatsApp
+
+### Modo `NOTIFICAR_SIEMPRE=true`
 ```
 📋 Verificación de nota
 
 📚 Materia: Investigación Operativa
 📝 Columna: 2º Parc.
 📊 Nota actual: 10
+
+🕐 5/11/2025 14:30:00
+```
+
+### Modo `NOTIFICAR_SIEMPRE=false`
+
+**Cuando hay un cambio de nota:**
+```
+🎓 ¡NOTA ACTUALIZADA!
+
+📚 Materia: Investigación Operativa
+📝 Columna: 2º Parc.
+📊 Nota nueva: 10
+
+🕐 5/11/2025 14:30:00
+```
+
+**Cuando aparece una nota nueva (de 0 a un valor):**
+```
+✨ ¡NUEVA NOTA DISPONIBLE!
+
+📚 Materia: Investigación Operativa
+📝 Columna: 2º Parc.
+📊 Nota: 10
 
 🕐 5/11/2025 14:30:00
 ```
