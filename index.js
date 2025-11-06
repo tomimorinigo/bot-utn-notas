@@ -89,7 +89,7 @@ async function enviarWhatsApp(mensaje) {
 
 async function verificarNotas() {
   const browser = await chromium.launch({
-    headless: false,
+    headless: true,
     args: ['--no-sandbox', '--disable-dev-shm-usage']
   });
 
