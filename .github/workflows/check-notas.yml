@@ -2,9 +2,9 @@ name: Verificar Notas
 
 on:
   # Deshabilitado el schedule por ahora
-  # schedule:
+  schedule:
     # corre cada 30 minutos
-    # - cron: '*/30 * * * *'
+    - cron: '*/30 * * * *'
   
   # tambien se puede ejecutar manual desde github
   workflow_dispatch:
